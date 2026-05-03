@@ -1,0 +1,10 @@
+1 - Criar um ambiente novo no computador atual
+    python -m venv venv
+2 - Ativar o Ambiente de Desenvolvimento
+    venv\Scripts\activate
+3 - Atualizar o Pip
+    python -m pip install --upgrade pip
+4 - Instalar as dependências do google
+    pip install fastapi uvicorn google-api-python-client google-auth-httplib2 google-auth-oauthlib
+5 - Rodar o servidor para testar a API
+    uvicorn main:app --reload
