@@ -69,7 +69,7 @@ def match():
 
 # ---------------------------------
 # AGENDAMENTO ENTREVISTA PRESENCIAL
-# ---------------------------------
+# -------------------------
 @app.post("/agendamento")
 def criar_agendamento(
     candidato: str,
