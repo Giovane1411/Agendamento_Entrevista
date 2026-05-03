@@ -4,7 +4,7 @@ import api_service
 
 app = FastAPI()
 
-
+resultados = []
 candidatos = []
 vagas = []
 agendamentos = []
@@ -29,7 +29,8 @@ def criar_candidato(nome: str, habilidade: str):
 
 @app.get("/candidatos")
 def listar_candidatos():
-    return candidatos
+    for candidato in candidatos:
+        return candidato
 
 # -------------------------
 # VAGAS
@@ -55,8 +56,6 @@ def listar_vagas():
 
 @app.get("/match")
 def match():
-    resultados = []
-
     for candidato in candidatos:
         for vaga in vagas:
             if candidato["habilidade"] == vaga["habilidade"]:
@@ -69,47 +68,62 @@ def match():
 
 # ---------------------------------
 # AGENDAMENTO ENTREVISTA PRESENCIAL
-# -------------------------
+# ---------------------------------
 @app.post("/agendamento")
 def criar_agendamento(
     candidato: str,
     vaga: str,
     data_inicio: str,
-    data_fim: str
+    data_fim: str,
+    indicado: str
     # Formato da data: "YYYY-MM-DDTHH:MM:SS-03:00"
 ):
-    # Aqui estou chamando a API para posteriormente agendar a entrevista no google calendar.
-    service = api_service.conectar_google_calendar()
+    candidatos = listar_candidatos()
+    resultado_match = match()
 
-    evento = {
-        "summary": f"Entrevista - {candidato}",
-        "description": f"Entrevista para a vaga: {vaga}",
-        "start": {
-            "dateTime": data_inicio,
-            "timeZone": "America/Sao_Paulo",
-        },
-        "end":{
-            "dateTime": data_fim,
-            "timeZone": "America/Sao_Paulo",
-        },
-    }
-    evento_criado = service.events().insert(
-        calendarId="primary",
-        body=evento
-    ).execute()
+    candidato_valido = any(candidato == candidatos["nome"]
+                           for candidato in candidatos
+                           )
 
-    agendamento = {
-        "id": len(agendamentos) + 1,
-        "candidato": candidato,
-        "vaga": vaga,
-        "data_inicio": data_inicio,
-        "data_fim": data_fim,
-        "link_google_agenda": evento_criado.get("htmlLink")
-    }
+    
+    match_valido = any(resultado["candidato"] == candidato and resultado["vaga"] == vaga
+                       for resultado in resultado_match 
+                       )
+    if match_valido or indicado == "sim" and candidato_valido:
+        # Aqui estou chamando a API para posteriormente agendar a entrevista no google calendar.
+        service = api_service.conectar_google_calendar()
 
-    agendamentos.append(agendamento)
+        evento = {
+            "summary": f"Entrevista - {candidato}",
+            "description": f"Entrevista para a vaga: {vaga}",
+            "start": {
+                "dateTime": data_inicio,
+                "timeZone": "America/Sao_Paulo",
+            },
+            "end":{
+                "dateTime": data_fim,
+                "timeZone": "America/Sao_Paulo",
+            },
+        }
+        evento_criado = service.events().insert(
+            calendarId="primary",
+            body=evento
+        ).execute()
 
-    return agendamento
+        agendamento = {
+            "id": len(agendamentos) + 1,
+            "candidato": candidato,
+            "vaga": vaga,
+            "data_inicio": data_inicio,
+            "data_fim": data_fim,
+            "link_google_agenda": evento_criado.get("htmlLink")
+        }
+
+        agendamentos.append(agendamento)
+
+        return agendamento
+    else:
+        return {"mensagem": "Candidato e vaga não são compatíveis para agendamento."}
 
 # Listar os agendamentos criados
 @app.get("/agendamento")
