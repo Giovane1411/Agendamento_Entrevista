@@ -10,6 +10,7 @@ pyvenv.cfg
 # Credenciais Google
 credentials.json
 token.json
+credentials_Meet.json
 
 # Cache Python
 __pycache__/

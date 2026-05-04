@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 import json
-import api_service
+import CalendarApi_service
 
 app = FastAPI()
 
-resultados = []
+
 candidatos = []
 vagas = []
 agendamentos = []
@@ -56,6 +56,7 @@ def listar_vagas():
 
 @app.get("/match")
 def match():
+    resultados = []
     for candidato in candidatos:
         for vaga in vagas:
             if candidato["habilidade"] == vaga["habilidade"]:
@@ -91,7 +92,7 @@ def criar_agendamento(
                        )
     if match_valido or indicado == "sim" and candidato_valido:
         # Aqui estou chamando a API para posteriormente agendar a entrevista no google calendar.
-        service = api_service.conectar_google_calendar()
+        service = CalendarApi_service.conectar_google_calendar()
 
         evento = {
             "summary": f"Entrevista - {candidato}",
@@ -104,10 +105,26 @@ def criar_agendamento(
                 "dateTime": data_fim,
                 "timeZone": "America/Sao_Paulo",
             },
+            "conferenceData":{
+                # Dados da reunião online vinculada ao evento.
+                "createRequest":{
+                    # Pedido para criar uma nova reunião online usando o Google Meet.
+
+                    "requestId": f"meet-{candidato}-{vaga}-{data_inicio}",
+                    # ID único da solicitação.
+                    # Ajuda a evitar a criação do mesmo Meet.
+
+                    "conferenceSolutionKey": {
+                        "type": "hangoutsMeet"
+                        # Tipo da Conferencia: Google Meet (hangoutsMeet).
+                    }
+                }
+            }
         }
         evento_criado = service.events().insert(
             calendarId="primary",
-            body=evento
+            body=evento,
+            conferenceDataVersion=1 # Habilita o google a executar o "conferenceData" para criar a reunião online.
         ).execute()
 
         agendamento = {
@@ -116,7 +133,8 @@ def criar_agendamento(
             "vaga": vaga,
             "data_inicio": data_inicio,
             "data_fim": data_fim,
-            "link_google_agenda": evento_criado.get("htmlLink")
+            "link_google_agenda": evento_criado.get("htmlLink"),
+            "link_google_meet": evento_criado.get("hangoutLink")
         }
 
         agendamentos.append(agendamento)
